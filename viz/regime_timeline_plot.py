@@ -14,23 +14,26 @@ def _find_dominant_label(labels_host: np.ndarray) -> int:
     return int(unique[non_noise_mask][dominant_idx])
 
 
-def _find_contiguous_runs(mask: np.ndarray) -> list:
+def _find_merged_runs(mask: np.ndarray, merge_gap: int) -> list:
+    indices = np.where(mask)[0]
+    if indices.shape[0] == 0:
+        return []
+
     runs = []
-    in_run = False
-    start = 0
-    for i, val in enumerate(mask):
-        if val and not in_run:
-            start = i
-            in_run = True
-        elif not val and in_run:
-            runs.append((start, i - 1))
-            in_run = False
-    if in_run:
-        runs.append((start, len(mask) - 1))
+    start = indices[0]
+    prev = indices[0]
+
+    for idx in indices[1:]:
+        if idx - prev > merge_gap:
+            runs.append((start, prev))
+            start = idx
+        prev = idx
+
+    runs.append((start, prev))
     return runs
 
 
-def build_regime_timeline_figure(timestamps: cp.ndarray, prices: cp.ndarray, cluster_labels: cp.ndarray, title: str = "Price with Regime Overlay", max_shaded_regimes: int = 8) -> go.Figure:
+def build_regime_timeline_figure(timestamps: cp.ndarray, prices: cp.ndarray, cluster_labels: cp.ndarray, title: str = "Price with Regime Overlay", max_shaded_regimes: int = 6, merge_gap: int = 50, max_shapes_per_regime: int = 15) -> go.Figure:
     timestamps_host = cp.asnumpy(timestamps)
     prices_host = cp.asnumpy(prices)
     labels_host = cp.asnumpy(cluster_labels)
@@ -58,11 +61,13 @@ def build_regime_timeline_figure(timestamps: cp.ndarray, prices: cp.ndarray, clu
 
     for label in top_labels:
         mask = labels_host == label
-        runs = _find_contiguous_runs(mask)
+        runs = _find_merged_runs(mask, merge_gap)
+
+        runs_sorted = sorted(runs, key=lambda r: r[1] - r[0], reverse=True)[:max_shapes_per_regime]
 
         color = color_map[label]
 
-        for run_idx, (start, end) in enumerate(runs):
+        for run_idx, (start, end) in enumerate(runs_sorted):
             x0 = timestamps_host[start]
             x1 = timestamps_host[end]
             fig.add_vrect(
@@ -70,9 +75,6 @@ def build_regime_timeline_figure(timestamps: cp.ndarray, prices: cp.ndarray, clu
                 fillcolor=color,
                 opacity=0.35,
                 line_width=0,
-                annotation_text=f"Regime {label}" if run_idx == 0 else None,
-                annotation_position="top left",
-                annotation_font_size=9,
             )
 
     fig.update_layout(
