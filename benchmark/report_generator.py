@@ -5,7 +5,8 @@ def generate_benchmark_report(results: dict, output_path: str) -> None:
     lines.append("| n_ticks | CPU total (s) | GPU total (s) | Speedup |")
     lines.append("|---|---|---|---|")
 
-    for n_ticks in sorted(results.keys()):
+    numeric_keys = [k for k in results.keys() if isinstance(k, int)]
+    for n_ticks in sorted(numeric_keys):
         entry = results[n_ticks]
         cpu_t = entry.get("cpu_total")
         gpu_t = entry.get("gpu_total")
