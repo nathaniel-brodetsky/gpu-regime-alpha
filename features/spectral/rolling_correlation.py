@@ -13,7 +13,6 @@ def _build_sliding_windows_multivariate(matrix: cp.ndarray, window: int) -> cp.n
     n, n_features = matrix.shape
     n_windows = n - window + 1
 
-    itemsize = matrix.itemsize
     row_stride = matrix.strides[0]
     col_stride = matrix.strides[1]
 
@@ -36,11 +35,8 @@ def compute_rolling_correlation_matrices(matrix: cp.ndarray, window: int) -> cp.
     safe_std = cp.where(std == 0, 1.0, std)
     normalized = centered / safe_std
 
-    n_windows = normalized.shape[0]
-    n_features = normalized.shape[2]
+    normalized_contig = cp.ascontiguousarray(normalized)
 
-    correlation_matrices = cp.empty((n_windows, n_features, n_features), dtype=cp.float64)
-    for w in range(n_windows):
-        correlation_matrices[w] = (normalized[w].T @ normalized[w]) / window
+    correlation_matrices = cp.einsum('wtf,wtg->wfg', normalized_contig, normalized_contig) / window
 
     return correlation_matrices
