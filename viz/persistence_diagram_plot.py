@@ -37,7 +37,7 @@ def build_persistence_diagram_figure(diagram: cp.ndarray, title: str = "Persiste
             color=lifetimes,
             colorscale="Viridis",
             showscale=True,
-            colorbar=dict(title="Lifetime"),
+            colorbar=dict(title="Lifetime", y=0.3, len=0.5),
         ),
     ))
 

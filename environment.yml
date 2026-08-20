@@ -1,0 +1,14 @@
+name: rapids
+channels:
+  - rapidsai
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.11
+  - rapids=25.08
+  - cuda-version=12.6
+  - scikit-learn>=1.5,<1.7
+  - xgboost
+  - umap-learn
+  - hdbscan
+  - plotly
