@@ -8,23 +8,24 @@ def generate_synthetic_lob(n_ticks: int, seed: int = 42) -> cudf.DataFrame:
     dt = cp.full(n_ticks, 1e-3, dtype=cp.float64)
     timestamps = cp.cumsum(dt)
 
-    mid_price_drift = rng.normal(0, 0.0001, n_ticks)
+    mid_price_drift = rng.standard_normal(n_ticks) * 0.0001
     mid_price = 100.0 + cp.cumsum(mid_price_drift)
 
-    spread = cp.abs(rng.normal(0.02, 0.005, n_ticks)) + 1e-4
+    spread = cp.abs(rng.standard_normal(n_ticks) * 0.005 + 0.02) + 1e-4
     best_bid = mid_price - spread / 2
     best_ask = mid_price + spread / 2
 
-    bid_size = cp.abs(rng.normal(500, 150, n_ticks)) + 1.0
-    ask_size = cp.abs(rng.normal(500, 150, n_ticks)) + 1.0
+    bid_size = cp.abs(rng.standard_normal(n_ticks) * 150 + 500) + 1.0
+    ask_size = cp.abs(rng.standard_normal(n_ticks) * 150 + 500) + 1.0
 
-    order_flow_sign = rng.choice(cp.array([-1.0, 1.0]), size=n_ticks)
-    trade_size = cp.abs(rng.normal(100, 40, n_ticks)) + 1.0
+    order_flow_sign = cp.where(rng.uniform(0, 1, n_ticks) > 0.5, 1.0, -1.0)
+    trade_size = cp.abs(rng.standard_normal(n_ticks) * 40 + 100) + 1.0
     trade_price = cp.where(order_flow_sign > 0, best_ask, best_bid)
 
-    regime_shock = rng.integers(0, n_ticks, size=n_ticks // 5000)
+    n_shocks = max(n_ticks // 5000, 1)
+    shock_indices = rng.integers(0, n_ticks, size=n_shocks)
     volatility_multiplier = cp.ones(n_ticks)
-    for shock_idx in regime_shock.tolist():
+    for shock_idx in shock_indices.tolist():
         window_end = min(shock_idx + 2000, n_ticks)
         volatility_multiplier[shock_idx:window_end] *= 4.0
 
