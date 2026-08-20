@@ -33,7 +33,7 @@ def generate_benchmark_report(results: dict, output_path: str) -> None:
 results = {
     5000: {"cpu_total": 26.485, "gpu_total": 1.7636},
     100000: {"cpu_total": 190.981, "gpu_total": 5.1337},
-    500000: {"cpu_total": None, "gpu_total": 33.3106},
+    500000: {"cpu_total": 1024.636, "gpu_total": 33.3106},
     "stage_breakdown_100k": {
         "feature_engineering": (111.942, 0.896),
         "umap_reduction": (75.116, 0.228),

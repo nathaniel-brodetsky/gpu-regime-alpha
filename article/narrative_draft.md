@@ -69,10 +69,15 @@ identical mathematics on pandas/NumPy/scikit-learn-family libraries.
 |---|---|---|---|
 | 5,000 | 26.48 | 1.76 | 15.0x |
 | 100,000 | 190.98 | 5.13 | 37.2x |
-| 500,000 | *(pending)* | 33.31 | — |
+| 500,000 | 1024.64 | 33.31 | 30.8x |
 
-The speedup isn't flat — it grows with scale, which is the honest signature of a
-GPU-bound workload amortizing fixed overhead. And it isn't uniform across stages:
+The speedup isn't flat, and it isn't monotonic — 15x at 5K, 37x at 100K, 31x at 500K.
+That dip is real and explainable: CPU-side UMAP scales worse than linearly (5.7x
+runtime growth for 5x more data), while GPU-side HDBSCAN is our current largest
+relative bottleneck at scale. We're showing the actual curve, not smoothing it into a
+monotonic story.
+
+Per-stage, the picture is even more nuanced:
 
 | Stage (100K ticks) | CPU (s) | GPU (s) | Speedup |
 |---|---|---|---|
