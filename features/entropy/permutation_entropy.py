@@ -49,13 +49,43 @@ def compute_permutation_entropy(series: cp.ndarray, order: int = 3, delay: int =
 
 
 def rolling_permutation_entropy(series: cp.ndarray, window: int, order: int = 3, delay: int = 1) -> cp.ndarray:
+    if delay > 1:
+        series = series[::delay]
+
     n = series.shape[0]
     n_windows = n - window + 1
+    n_patterns_per_window = window - order + 1
 
-    entropy_values = cp.full(n_windows, cp.nan, dtype=cp.float64)
+    outer_windows = _build_sliding_windows(series, window)
 
-    for w in range(n_windows):
-        segment = series[w:w + window]
-        entropy_values[w] = compute_permutation_entropy(segment, order, delay)
+    itemsize = series.itemsize
+    inner_strides = (outer_windows.strides[0], outer_windows.strides[1], outer_windows.strides[1])
+    ordinal_windows = as_strided(
+        outer_windows,
+        shape=(n_windows, n_patterns_per_window, order),
+        strides=inner_strides,
+    )
 
-    return entropy_values
+    flat_ordinal = ordinal_windows.reshape(-1, order)
+    pattern_ids_flat = _ordinal_pattern_rank(flat_ordinal, order)
+    pattern_ids = pattern_ids_flat.reshape(n_windows, n_patterns_per_window)
+
+    n_pattern_types = math.factorial(order)
+
+    one_hot = cp.zeros((n_windows, n_patterns_per_window, n_pattern_types), dtype=cp.float64)
+    row_idx = cp.repeat(cp.arange(n_windows), n_patterns_per_window)
+    col_idx = cp.tile(cp.arange(n_patterns_per_window), n_windows)
+    pattern_flat = pattern_ids.flatten()
+    one_hot[row_idx, col_idx, pattern_flat] = 1.0
+
+    counts = cp.sum(one_hot, axis=1)
+    probs = counts / n_patterns_per_window
+
+    safe_probs = cp.where(probs > 0, probs, 1.0)
+    log_probs = cp.where(probs > 0, cp.log(safe_probs), 0.0)
+    entropy = -cp.sum(probs * log_probs, axis=1)
+
+    max_entropy = math.log(n_pattern_types)
+    normalized_entropy = entropy / max_entropy
+
+    return normalized_entropy
